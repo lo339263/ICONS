@@ -44,11 +44,3 @@ print(stimulus.u_name)
 ```
 
 The Python API defaults to white `[95.047, 100, 108.883]`, La=64, Yb=20 and average surround. Pass the web app's reference white explicitly when comparing results.
-
-## Calculation notes
-
-- Colour naming uses the trained CIELAB Gaussian model. Python parameters are in `models/gaussian.json`; the browser uses the corresponding parameters in `docs/gaussian.js`.
-- sCAM uses a matrix-derived neutral reference and full CAT16 adaptation. Lab `[L, 0, 0]` gives zero sUCS a and b. Numerical opponent-coordinate residuals below 1e-10 are cleared, and neutral hue is defined as zero.
-- La does not affect full adaptation. Yb and surround affect J. The Python API also provides La-dependent adaptation through `cat16` when no explicit adaptation degree is supplied.
-- The browser swatch adapts to standard sRGB D65 and clips out-of-gamut channels. The Python display helper performs XYZ/sRGB conversion without that additional white-point adaptation.
-- Chromatic adaptation is not a spectral conversion between 10-degree and 2-degree observers. NCS output is an estimated hue notation, not a complete standard colour code.
