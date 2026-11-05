@@ -43,4 +43,3 @@ stimulus = lab_to_colorstimulus([60, 20, 35], xyzw=[94.810, 100, 107.305])
 print(stimulus.u_name)
 ```
 
-The Python API defaults to white `[95.047, 100, 108.883]`, La=64, Yb=20 and average surround. Pass the web app's reference white explicitly when comparing results.
