@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+.deps/
+.env
+.env.*
+*.zip
+.browser-*/

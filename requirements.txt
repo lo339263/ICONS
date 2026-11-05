@@ -1,0 +1,3 @@
+numpy>=1.24,<3
+colour-science>=0.4.4,<0.5
+pydantic>=2,<3
