@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Generate ICONS from CIELAB or XYZ with local colour calculations.">
+<title>ICONS · Colour Laboratory</title>
+<style>
+:root{font-family:Inter,"Segoe UI",sans-serif;color:#20352d;background:#f3f5ef;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:auto;padding:42px 24px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:40px}.brand{font-size:21px;font-weight:800;letter-spacing:4px}.tag{font-size:12px;border:1px solid #cad4c8;border-radius:30px;padding:7px 13px;color:#526252}
+h1{font-size:clamp(30px,4vw,44px);letter-spacing:-1.5px;margin:0 0 12px}p{line-height:1.7;color:#657066}.layout{display:grid;grid-template-columns:360px 1fr;gap:22px;align-items:start}.card{background:#fff;border:1px solid #dce2d7;border-radius:18px;padding:24px}h2{font-size:16px;margin:0 0 20px}.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#737f71;margin-bottom:8px}
+label{display:block;font-size:12px;color:#586858;margin-bottom:8px}input,select,button{font:inherit}input,select{width:100%;padding:11px;border:1px solid #cfd8ca;border-radius:8px;background:#fbfcf9;color:#20352d}input:focus,select:focus,button:focus-visible{outline:3px solid #a7c1ad;outline-offset:2px}.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.field label{white-space:nowrap}.row{margin:20px 0}.primary{width:100%;border:0;border-radius:9px;padding:13px;background:#244b37;color:white;cursor:pointer;font-weight:600}.primary:hover{background:#346348}.secondary{padding:8px 12px;background:white;border:1px solid #cfd8ca;border-radius:8px;color:#36543d;cursor:pointer;font-size:12px}
+.metrics{display:grid;grid-template-columns:1fr;gap:0 22px}.metric{border-top:1px solid #e6eae1;padding:15px 0;min-width:0}.metric dt{font-size:11px;color:#758072;margin-bottom:7px}.metric dd{margin:0;font-size:14px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#error{color:#a3382d;font-size:13px;min-height:18px;margin-top:12px}[hidden]{display:none!important}.stale{opacity:.45}#output{transition:opacity .15s}
+@media(max-width:760px){main{padding:24px 16px}.layout{grid-template-columns:1fr}header{margin-bottom:30px}.card{padding:20px}.metrics{gap:0 14px}}
+</style>
+</head>
+<body><main>
+<header><div class="brand">ICONS<span style="color:#7d9977">.</span></div><span class="tag">Local processing · No uploads</span></header>
+<div class="eyebrow">Colour workspace / 01</div>
+<h1>From colour coordinates to ICONS.</h1>
+<div class="layout">
+<form class="card" id="form">
+<h2>Colour input</h2>
+<label for="mode">Colour space</label><select id="mode"><option value="lab">CIELAB · L* a* b*</option><option value="xyz">CIE XYZ · X Y Z</option></select>
+<div class="fields" id="coordinates">
+<div class="field"><label for="v0">L*</label><input id="v0" type="number" step="any" value="60" required></div>
+<div class="field"><label for="v1">a*</label><input id="v1" type="number" step="any" value="20" required></div>
+<div class="field"><label for="v2">b*</label><input id="v2" type="number" step="any" value="35" required></div>
+</div>
+<label for="white">Reference white · CIE 1964 10°</label><select id="white"><option>D65</option><option value="custom">Custom</option></select>
+<div class="fields">
+<div><label for="w0">Xw</label><input id="w0" type="number" step="any" required readonly></div>
+<div><label for="w1">Yw</label><input id="w1" type="number" step="any" required readonly></div>
+<div><label for="w2">Zw</label><input id="w2" type="number" step="any" required readonly></div>
+</div>
+
+<div class="row"><button class="primary" type="submit">Generate ICONS →</button></div>
+<button class="secondary" type="button" id="sample">Reset example</button>
+<div id="error" role="alert"></div>
+</form>
+<section class="card" id="output" aria-label="Results" aria-live="polite">
+<div style="background:#244b37;color:white;border-radius:12px;padding:22px;margin-bottom:20px">
+<h2 style="color:#d2e5c9;font-size:14px;letter-spacing:3px;margin:0 0 12px">ICONS</h2>
+<output id="uname" style="display:block;font:600 clamp(22px,3vw,32px)/1.5 ui-monospace,monospace;overflow-wrap:anywhere;user-select:all">—</output>
+
+</div>
+<div id="swatch" role="img" aria-label="sRGB colour swatch" style="height:150px;border-radius:12px;border:1px solid #dce2d7;margin-bottom:20px"></div>
+<dl class="metrics">
+<div class="metric"><dt>CIELAB</dt><dd id="lab">&#8212;</dd></div>
+<div class="metric"><dt>XYZ</dt><dd id="xyz">&#8212;</dd></div>
+<div class="metric"><dt>sUCS</dt><dd id="sucs">&#8212;</dd></div>
+</dl>
+</section>
+</div>
+</main>
+<script src="gaussian.js"></script><script src="color.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+let result=null;
+const fmt=v=>Array.isArray(v)?v.map(x=>x===null?"—":x.toFixed(3)).join(" / "):v.toFixed(3);
+const values=prefix=>[0,1,2].map(i=>$(prefix+i).value.trim()===""?NaN:Number($(prefix+i).value));
+function invalidate(){result=null;$("output").classList.add("stale");}
+function updateWhite(){
+  const custom=$("white").value==="custom", w=Color.whitepoints[$("white").value];
+  [0,1,2].forEach(i=>{$("w"+i).readOnly=!custom;if(w)$("w"+i).value=w[i];});
+}
+function updateLabels(){
+  const names=$("mode").value==="lab"?["L*","a*","b*"]:["X","Y","Z"];
+  document.querySelectorAll("#coordinates label").forEach((el,i)=>el.textContent=names[i]);
+}
+function calculate(){
+  try{
+    const r=Color.calculate($("mode").value,values("v"),values("w"));
+    $("error").textContent="";$("output").classList.remove("stale");result=r;
+    for(const key of ["lab","xyz","sucs"])$(key).textContent=fmt(r[key]);
+    $("uname").textContent=r.u_name;
+    $("swatch").style.backgroundColor=r.hex;
+  }catch(e){invalidate();$("error").textContent=e.message;}
+}
+$("form").addEventListener("submit",e=>{e.preventDefault();calculate();});
+$("form").addEventListener("input",e=>{if(e.target.id!=="mode")invalidate();});
+$("mode").addEventListener("change",()=>{if(result){const v=$("mode").value==="lab"?result.lab:result.xyz;v.forEach((n,i)=>$("v"+i).value=n.toFixed(6));}updateLabels();invalidate();});
+$("white").addEventListener("change",()=>{updateWhite();invalidate();});
+$("sample").onclick=()=>{$("form").reset();updateWhite();updateLabels();calculate();};
+updateWhite();calculate();
+</script></body></html>
